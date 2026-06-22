@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+	ANSIBLE_COLLECTION_PATH = '/home/svc_install/.ansible/collections"
+    }
+
     options {
         skipDefaultCheckout(true)
     }
