@@ -1,0 +1,8 @@
+---
+# defaults file for services
+
+services_to_test:
+  - crond
+  - irqbalance
+  - tuned
+  - rhsmcertd

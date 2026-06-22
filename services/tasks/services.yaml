@@ -1,0 +1,109 @@
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Display current service status
+  debug:
+    msg: "{{ item }} is {{ ansible_facts.services[item + '.service'].state }}"
+  loop: "{{ services_to_test }}"
+
+- name: Get PID before stopping
+  ansible.builtin.command:
+    cmd: "systemctl show {{ item }} --property MainPID --value"
+  register: pid_before
+  loop: "{{ services_to_test }}"
+  changed_when: false
+
+- name: Display PID before stopping
+  debug:
+    msg: "{{ item.item }} PID = {{ item.stdout }}"
+  loop: "{{ pid_before.results }}"
+
+- name: Stop services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+  loop: "{{ services_to_test }}"
+
+- name: Gather service facts after stop
+  ansible.builtin.service_facts:
+
+- name: Verify services are stopped
+  debug:
+    msg: "{{ item }} is {{ ansible_facts.services[item + '.service'].state }}"
+  loop: "{{ services_to_test }}"
+
+- name: Start services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop: "{{ services_to_test }}"
+
+- name: Gather service facts after start
+  ansible.builtin.service_facts:
+
+- name: Verify services are running
+  debug:
+    msg: "{{ item }} is {{ ansible_facts.services[item + '.service'].state }}"
+  loop: "{{ services_to_test }}"
+
+- name: Get PID after restart
+  ansible.builtin.command:
+    cmd: "systemctl show {{ item }} --property MainPID --value"
+  register: pid_after
+  loop: "{{ services_to_test }}"
+  changed_when: false
+
+- name: Service restart validation
+  debug:
+    msg: >
+      {{ item.item }} :
+      {{ 'PASS' if item.stdout != pid_after.results[ansible_loop.index0].stdout else 'FAIL' }}
+      (Old PID={{ item.stdout }},
+      New PID={{ pid_after.results[ansible_loop.index0].stdout }})
+  loop: "{{ pid_before.results }}"
+  loop_control:
+    extended: yes
+    label: "{{ item.item }}"
+
+- name: Service restart report
+  debug:
+    msg: "{{ '%-12s %-10s %-10s %-10s' | format(item.item, item.stdout, pid_after.results[ansible_loop.index0].stdout, item.stdout != pid_after.results[ansible_loop.index0].stdout) }}"
+  loop: "{{ pid_before.results }}"
+  loop_control:
+    extended: yes
+    label: "{{ item.item }}"
+
+- name: Initialize report
+  set_fact:
+    service_report: |
+      Service      Old PID     New PID     Status
+      --------------------------------------------
+
+- name: Build report
+  set_fact:
+    service_report: |
+      {{ service_report }}
+      {{ '%-12s %-11s %-11s %-10s' | format(
+           item.item,
+           item.stdout,
+           pid_after.results[ansible_loop.index0].stdout,
+           'PASS' if item.stdout != pid_after.results[ansible_loop.index0].stdout else 'FAIL'
+         ) }}
+  loop: "{{ pid_before.results }}"
+  loop_control:
+    extended: yes
+    label: "{{ item.item }}"
+
+- name: Send the report to the email
+  community.general.mail:
+    host: smtp.gmail.com
+    port: 587
+    username: "{{ gmail_username }}"
+    password: "{{ gmail_password }}"
+    to:
+      - nithindatta357@gmail.com
+    from: "{{ gmail_username }}"
+    subject: "Ansible Service Restart Report"
+    body: "{{ service_report }}"
+

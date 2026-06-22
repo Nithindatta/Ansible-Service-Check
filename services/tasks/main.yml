@@ -1,0 +1,5 @@
+---
+# tasks file for services
+- name: Task to check services
+  ansible.builtin.import_tasks: services.yaml
+
