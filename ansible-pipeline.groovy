@@ -8,6 +8,23 @@ pipeline {
     options {
         skipDefaultCheckout(true)
     }
+    stage('Debug') {
+    	steps {
+            sh '''
+            whoami
+            pwd
+
+	    echo "=== Ansible Version ==="
+	    ansible --version
+
+	    echo "=== Collection Path ==="
+	    env | grep ANSIBLE
+
+            echo "=== Mail Module Test ==="
+            ansible-doc community.general.mail
+            '''
+            }
+        }
 
     stages {
         stage('Checkout Code') {
