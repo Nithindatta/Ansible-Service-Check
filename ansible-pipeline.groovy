@@ -19,11 +19,11 @@ pipeline {
                 withCredentials([
                     file(credentialsId: 'vault.pass', variable: 'VAULT_FILE'),
                     sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key'
-                        keyFileVariable: 'SSH_KEY'
+                        credentialsId: 'ansible-ssh-key',
+                        keyFileVariable: 'SSH_KEY',
                         usernameVariable: 'SSH_USER'
                     ),
-                    string (credentialsId: 'gmail-username', variable: 'GMAIL_USER')
+                    string (credentialsId: 'gmail-username', variable: 'GMAIL_USER'),
                     string (credentialsId: 'gmail-password', variable: 'GMAIL_PASS')
                 ]) {
                     sh '''
