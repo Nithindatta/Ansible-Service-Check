@@ -29,7 +29,7 @@ pipeline {
                     sh '''
                     ansible --version
 
-                    ansible-playbook -i inventory.ini check-services.yaml --syntax-check \
+                    ansible-playbook -i inventory.ini check_services.yaml --syntax-check \
                     --vault-password-file $VAULT_FILE
                     '''
                 }
