@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        ANSIBLE_COLLECTIONS_PATH = '/home/svc_install/.ansible/collections'
+        ANSIBLE_COLLECTIONS_PATHS = '/home/svc_install/.ansible/collections:/usr/share/ansible/collections'
     }
 
     options {
@@ -14,17 +14,26 @@ pipeline {
         stage('Debug') {
             steps {
                 sh '''
+                echo "===== USER ====="
                 whoami
+
+                echo "===== WORKSPACE ====="
                 pwd
 
-                echo "=== Ansible Version ==="
+                echo "===== ANSIBLE VERSION ====="
                 ansible --version
 
-                echo "=== Collection Path ==="
-                env | grep ANSIBLE
+                echo "===== COLLECTION ENV ====="
+                env | grep ANSIBLE || true
 
-                echo "=== Mail Module Test ==="
-                ansible-doc community.general.mail
+                echo "===== COLLECTION PATHS ====="
+                ansible-config dump | grep COLLECTION || true
+
+                echo "===== INSTALLED COLLECTIONS ====="
+                ansible-galaxy collection list | grep community.general || true
+
+                echo "===== MAIL MODULE TEST ====="
+                ansible-doc community.general.mail || true
                 '''
             }
         }
@@ -49,7 +58,15 @@ pipeline {
                     string(credentialsId: 'gmail-username', variable: 'GMAIL_USER'),
                     string(credentialsId: 'gmail-password', variable: 'GMAIL_PASS')
                 ]) {
+
                     sh '''
+                    echo "===== VERIFY MAIL MODULE ====="
+                    ansible-doc community.general.mail
+
+                    echo "===== VERIFY VAULT FILE ====="
+                    ls -l $VAULT_FILE
+
+                    echo "===== PLAYBOOK SYNTAX CHECK ====="
                     ansible-playbook \
                       -i inventory.ini \
                       check_services.yaml \
@@ -58,6 +75,20 @@ pipeline {
                     '''
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline completed"
+        }
+
+        success {
+            echo "Syntax check successful"
+        }
+
+        failure {
+            echo "Syntax check failed"
         }
     }
 }
